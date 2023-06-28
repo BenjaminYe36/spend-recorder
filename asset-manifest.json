@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/spend-recorder/static/css/main.7a782609.css",
+    "main.js": "/spend-recorder/static/js/main.4562b24f.js",
+    "index.html": "/spend-recorder/index.html",
+    "main.7a782609.css.map": "/spend-recorder/static/css/main.7a782609.css.map",
+    "main.4562b24f.js.map": "/spend-recorder/static/js/main.4562b24f.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.7a782609.css",
+    "static/js/main.4562b24f.js"
+  ]
+}
