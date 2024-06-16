@@ -9,7 +9,7 @@ subCategories.set("买菜", ["Fred Meyer", "QFC", "Safeway", "百家", "Costco",
 subCategories.set("加油", ["Costco", "ARCO", "其它"]);
 subCategories.set("租房", ["全部"]);
 subCategories.set("Utilities", ["网络", "电费", "水费和垃圾", "手机"]);
-subCategories.set("饭店", ["McDonald's", "Chipotle"]);
+subCategories.set("饭店", ["McDonald's", "Chipotle", "KFC", "Domino's Pizza"]);
 subCategories.set("Outlets", ["Gap"]);
 subCategories.set("家装家具", ["IKEA", "Home Depot", "Fred Meyer"]);
 subCategories.set("Gym", ["LA Fitness"]);
