@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/spend-recorder/static/css/main.7a782609.css",
-    "main.js": "/spend-recorder/static/js/main.e9191abe.js",
+    "main.js": "/spend-recorder/static/js/main.ea85164b.js",
     "index.html": "/spend-recorder/index.html",
     "main.7a782609.css.map": "/spend-recorder/static/css/main.7a782609.css.map",
-    "main.e9191abe.js.map": "/spend-recorder/static/js/main.e9191abe.js.map"
+    "main.ea85164b.js.map": "/spend-recorder/static/js/main.ea85164b.js.map"
   },
   "entrypoints": [
     "static/css/main.7a782609.css",
-    "static/js/main.e9191abe.js"
+    "static/js/main.ea85164b.js"
   ]
 }
