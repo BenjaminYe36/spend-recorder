@@ -6,11 +6,10 @@ import Autocomplete, {createFilterOptions} from '@mui/material/Autocomplete';
 import {DatePicker} from '@mui/x-date-pickers/DatePicker';
 import {LocalizationProvider} from '@mui/x-date-pickers/LocalizationProvider';
 import {AdapterDayjs} from '@mui/x-date-pickers/AdapterDayjs';
+import PublicGoogleSheetsParser from 'public-google-sheets-parser';
+import {UniqueSet} from '@sepiariver/unique-set';
 
 import {categories, subCategories} from "./categoryData";
-
-// Test submit form directly (currently ok)
-// OR submit an invisible form based on input states (not tested yet)
 
 interface CategoryOptionType {
     inputValue?: string;
@@ -18,6 +17,10 @@ interface CategoryOptionType {
 }
 
 const filter = createFilterOptions<CategoryOptionType>();
+
+// Constants
+const HTML_FORM_ID = "rec-form";
+const PERIOD_FOR_RECENT_ADD_DETECTION = 10; // in seconds
 
 function App() {
     // states
@@ -57,10 +60,11 @@ function App() {
     const eid5 = queryParams.get("eid5"); // for singleName
     const eid6 = queryParams.get("eid6"); // for productCount
     const eid7 = queryParams.get("eid7"); // for unit
+    const sheetId = queryParams.get("sheetId"); // for public sheet to ensure uniqueness
 
     // handle missing params case
     if (formId === null || eid1 === null || eid2 === null || eid3 === null ||
-        eid4 === null || eid5 === null || eid6 === null || eid7 === null) {
+        eid4 === null || eid5 === null || eid6 === null || eid7 === null || sheetId === null) {
         return (
             <div className="app-container">
                 <h1>Missing params, please fill in the search params</h1>
@@ -145,14 +149,80 @@ function App() {
             return;
         }
         setErrorMsg("");
-        // @ts-ignore
-        document.getElementById("rec-form").submit();
+
+        // Ensure uniqueness in response from sheetId
+        const parser = new PublicGoogleSheetsParser(sheetId);
+
+        parser.parse().then((data) => {
+            if (data.length === 0) {
+                throw new Error("Empty Sheet");
+            }
+            const set = new UniqueSet();
+            for (let oneEntry of data) {
+                delete oneEntry["时间戳记"];
+                delete oneEntry["单品名称"];
+                delete oneEntry["单品数量"];
+                delete oneEntry["计价单位"];
+                set.add(oneEntry);
+            }
+
+            // construct object from form input, and test uniqueness
+            const formObj = {
+                "消费类别": category.displayName,
+                "子类别/商户": subCat.displayName,
+                "总价": parseFloat(total),
+                "日期": date.format("MM/DD/YYYY"),
+            };
+
+            if (set.has(formObj)) { // have a confirm window for duplicate
+                // eslint-disable-next-line no-restricted-globals
+                if (confirm("Duplicate info found, still want to submit?")) {
+                    postForm(parser, formObj);
+                }
+            } else {
+                postForm(parser, formObj);
+            }
+        }).catch((error) => setErrorMsg(error.toString()));
+    };
+
+    const postForm = (parser: PublicGoogleSheetsParser, formObj: any) => {
+        const formData = new FormData(document.getElementById(HTML_FORM_ID) as HTMLFormElement);
+        fetch(`https://docs.google.com/forms/d/e/${formId}/formResponse`, {
+            method: "POST",
+            body: formData
+        }).catch((error) => {
+            // seems like having CORS error but can still post into form
+            // fetch sheet to see whether we have a recent data match
+            parser.parse().then((data) => {
+                if (data.some((oneEntry) => {
+                    const dateParts = oneEntry["时间戳记"].match(/\d+/g); // Extract all numbers from the string
+                    const dateObject = new Date(
+                        dateParts[0],  // year
+                        dateParts[1],  // month (0-based, so no need to adjust)
+                        dateParts[2],  // day
+                        dateParts[3],  // hours
+                        dateParts[4],  // minutes
+                        dateParts[5]   // seconds
+                    );
+                    return (new Date().getTime() - dateObject.getTime()
+                            <= PERIOD_FOR_RECENT_ADD_DETECTION * 1000)
+                        && (oneEntry["消费类别"] === formObj["消费类别"])
+                        && (oneEntry["子类别/商户"] === formObj["子类别/商户"])
+                        && (oneEntry["总价"] === formObj["总价"])
+                        && (oneEntry["日期"] === formObj["日期"]);
+                })) {
+                    alert("Form submitted successfully!");
+                } else {
+                    setErrorMsg(error.toString());
+                }
+            });
+        });
     };
 
     return (
         <div className="app-container">
             <form
-                id="rec-form"
+                id={HTML_FORM_ID}
                 action={`https://docs.google.com/forms/d/e/${formId}/formResponse`}
             >
                 <Autocomplete
