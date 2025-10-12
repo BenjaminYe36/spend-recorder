@@ -1,4 +1,4 @@
-export const categories = ["买菜", "加油", "租房", "Utilities", "饭店", "Outlets", "家装家具", "Gym", "保险"]
+export const categories = ["买菜", "加油", "租房", "Utilities", "饭店", "Outlets", "家装家具", "Gym", "保险", "Travel"]
     .map((val) => {
         return {displayName: val};
     });
@@ -14,3 +14,4 @@ subCategories.set("Outlets", ["Gap"]);
 subCategories.set("家装家具", ["IKEA", "Home Depot", "Fred Meyer"]);
 subCategories.set("Gym", ["LA Fitness"]);
 subCategories.set("保险", ["车险", "医疗保险"]);
+subCategories.set("Travel", ["Flights", "Public Transit", "Hotel", "Dining", "购物", "Entertainment"])
