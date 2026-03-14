@@ -20,7 +20,7 @@ const filter = createFilterOptions<CategoryOptionType>();
 
 // Constants
 const HTML_FORM_ID = "rec-form";
-const PERIOD_FOR_RECENT_ADD_DETECTION = 10; // in seconds
+const PERIOD_FOR_RECENT_ADD_DETECTION = 30; // in seconds
 
 function App() {
     // states
@@ -33,6 +33,8 @@ function App() {
     const [productCount, setProductCount] = useState<string>(""); // amount of this singleName product bought (optional)
     const [unit, setUnit] = useState<string>(""); // unit for calculating the price for a single item (optional)
     const [errorMsg, setErrorMsg] = useState<string>("");
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [submitStage, setSubmitStage] = useState<string>("");
 
     // use effect
     useEffect(() => {
@@ -133,7 +135,7 @@ function App() {
         setErrorMsg("");
     };
 
-    const validateAndSubmit = () => {
+    const validateAndSubmit = async () => {
         if (category === null || subCat == null || date === null || total.trim().length === 0) {
             setErrorMsg("请填写必填项目");
             return;
@@ -150,10 +152,16 @@ function App() {
         }
         setErrorMsg("");
 
+        // Set loading state and stage
+        setIsSubmitting(true);
+        setSubmitStage("正在检查重复记录...");
+
         // Ensure uniqueness in response from sheetId
         const parser = new PublicGoogleSheetsParser(sheetId);
 
-        parser.parse().then((data) => {
+        try {
+            setSubmitStage("正在获取数据...");
+            const data = await parser.parse();
             if (data.length === 0) {
                 throw new Error("Empty Sheet");
             }
@@ -176,23 +184,34 @@ function App() {
 
             if (set.has(formObj)) { // have a confirm window for duplicate
                 // eslint-disable-next-line no-restricted-globals
-                if (confirm("Duplicate info found, still want to submit?")) {
-                    postForm(parser, formObj);
+                if (confirm("重复记录已经找到，是否仍要提交?\nDuplicate info found, still want to submit?")) {
+                    await postForm(parser, formObj);
+                } else {
+                    setIsSubmitting(false);
+                    setSubmitStage("");
                 }
             } else {
-                postForm(parser, formObj);
+                await postForm(parser, formObj);
             }
-        }).catch((error) => setErrorMsg(error.toString()));
+        } catch (error) {
+            setIsSubmitting(false);
+            setSubmitStage("");
+            setErrorMsg(`第一阶段获取数据失败: ${error}`);
+        }
     };
 
-    const postForm = (parser: PublicGoogleSheetsParser, formObj: any) => {
-        const formData = new FormData(document.getElementById(HTML_FORM_ID) as HTMLFormElement);
-        fetch(`https://docs.google.com/forms/d/e/${formId}/formResponse`, {
-            method: "POST",
-            body: formData
-        }).catch((error) => {
+    const postForm = async (parser: PublicGoogleSheetsParser, formObj: any) => {
+        try {
+            setSubmitStage("正在提交表单...");
+            const formData = new FormData(document.getElementById(HTML_FORM_ID) as HTMLFormElement);
+            await fetch(`https://docs.google.com/forms/d/e/${formId}/formResponse`, {
+                method: "POST",
+                body: formData
+            });
+        } catch (error) {
             // seems like having CORS error but can still post into form
             // fetch sheet to see whether we have a recent data match
+            setSubmitStage("正在验证提交结果...");
             parser.parse().then((data) => {
                 if (data.some((oneEntry) => {
                     const dateParts = oneEntry["时间戳记"].match(/\d+/g); // Extract all numbers from the string
@@ -213,10 +232,15 @@ function App() {
                 })) {
                     alert("Form submitted successfully!");
                 } else {
-                    setErrorMsg(error.toString());
+                    setErrorMsg("表单提交验证失败，可能提交未成功");
                 }
+            }).catch((validationError) => {
+                setErrorMsg(`第二阶段验证失败: ${validationError}`);
+            }).finally(() => {
+                setIsSubmitting(false);
+                setSubmitStage("");
             });
-        });
+        }
     };
 
     return (
@@ -340,15 +364,20 @@ function App() {
 
                 <Button color="warning" variant="outlined" size="large"
                         sx={{marginTop: "1em"}}
-                        onClick={clearForm}>
+                        onClick={clearForm}
+                        disabled={isSubmitting}>
                     清空
                 </Button>
                 <Button color="primary" variant="outlined" size="large"
                         sx={{float: "right", marginTop: "1em"}}
-                        onClick={validateAndSubmit}>
-                    提交
+                        onClick={validateAndSubmit}
+                        disabled={isSubmitting}>
+                    {isSubmitting ? "提交中..." : "提交"}
                 </Button>
             </form>
+            {isSubmitting && (
+                <h2 style={{color: "blue"}}>{submitStage}</h2>
+            )}
             <h1 style={{color: "red"}}>{errorMsg}</h1>
         </div>
     );
